@@ -29,10 +29,6 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
-  icons: {
-    icon: "/icon-192.jpg",
-    apple: "/icon-192.jpg",
-  },
     generator: 'v0.app'
 }
 

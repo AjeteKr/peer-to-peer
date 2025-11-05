@@ -3,8 +3,6 @@ import { testConnection } from '@/lib/sqlserver/connection';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 Testing SQL Server connection...');
-    
     const result = await testConnection();
     
     if (result.success) {

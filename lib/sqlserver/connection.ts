@@ -24,12 +24,6 @@ interface DatabaseConfig {
 function getDatabaseConfig(): DatabaseConfig {
   const useIntegratedSecurity = process.env.SQL_SERVER_INTEGRATED_SECURITY === 'true';
   
-  console.log('🔧 Environment check:');
-  console.log('   SQL_SERVER_INTEGRATED_SECURITY:', process.env.SQL_SERVER_INTEGRATED_SECURITY);
-  console.log('   SQL_SERVER_HOST:', process.env.SQL_SERVER_HOST);
-  console.log('   SQL_SERVER_DATABASE:', process.env.SQL_SERVER_DATABASE);
-  console.log('   Using integrated security:', useIntegratedSecurity);
-  
   if (useIntegratedSecurity) {
     throw new Error('Windows Authentication is not supported. Please use SQL Server Authentication.');
   }
@@ -64,7 +58,6 @@ export async function getConnection(): Promise<sql.ConnectionPool> {
     
     // If configuration changed, close old pool
     if (currentConfig && currentConfig !== configHash && pool) {
-      console.log('🔄 Configuration changed, closing old connection...');
       await pool.close();
       pool = null;
     }
@@ -74,8 +67,6 @@ export async function getConnection(): Promise<sql.ConnectionPool> {
     if (pool && pool.connected) {
       return pool;
     }
-
-    console.log('🔗 Connecting to SQL Server...');
     
     // Close existing connection if any
     if (pool) {
@@ -84,26 +75,16 @@ export async function getConnection(): Promise<sql.ConnectionPool> {
 
     useWindowsAuth = dbConfig.driver === 'msnodesqlv8';
     
-    console.log(`📋 Using ${useWindowsAuth ? 'Windows Authentication (Named Pipes)' : 'SQL Authentication'}`);
-    console.log(`📍 Server: ${dbConfig.server}, Database: ${dbConfig.database}`);
-    
     // Always use default tedious driver for SQL Authentication
-    console.log('✅ Creating connection with tedious driver (SQL Auth)');
     pool = new sql.ConnectionPool(dbConfig);
     
     // Handle connection events
-    pool.on('connect', () => {
-      console.log('✅ Connected to SQL Server database');
-    });
-
     pool.on('error', (err) => {
       console.error('❌ SQL Server connection error:', err);
       pool = null;
     });
 
-    console.log('🔌 Initiating connection...');
     await pool.connect();
-    console.log('✅ Connection established successfully!');
     return pool;
     
   } catch (error) {
@@ -229,20 +210,9 @@ export async function executeTransaction<T = any>(
 // Helper function to test connection  
 export async function testConnection(): Promise<{ success: boolean; serverVersion?: string; database?: string; error?: string }> {
   try {
-    console.log('🧪 Running connection test...');
-    // Simple connection test
     const connection = await getConnection();
-    console.log('📡 Connection obtained, connection type:', connection.constructor.name);
-    
-    // Try using request method properly
     const request = connection.request();
-    console.log('📋 Request created');
-    console.log('📋 All request properties:', Object.keys(request));
-    console.log('📋 typeof request.query:', typeof (request as any).query);
-    
-    // Try calling query
     const result = await (request as any).query('SELECT @@VERSION as version, DB_NAME() as database_name');
-    console.log('✅ Test query executed successfully');
     
     if (result.recordset && result.recordset.length > 0) {
       return {
@@ -253,8 +223,6 @@ export async function testConnection(): Promise<{ success: boolean; serverVersio
     }
     return { success: false, error: 'No version information returned' };
   } catch (error) {
-    console.error('❌ Connection test failed:', error);
-    console.error('❌ Error stack:', (error as any)?.stack);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 

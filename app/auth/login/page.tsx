@@ -39,7 +39,12 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed')
       }
 
-      // Store user data in localStorage for client-side access
+      // Store authentication token in both localStorage and cookie
+      if (data.token) {
+        localStorage.setItem('token', data.token)
+        // Set cookie for server-side authentication
+        document.cookie = `auth_token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
+      }
       localStorage.setItem('user', JSON.stringify(data.user))
       
       // Redirect to dashboard

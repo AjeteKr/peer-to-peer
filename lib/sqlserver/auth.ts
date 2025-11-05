@@ -223,9 +223,9 @@ export async function loginUser(
       };
     }
 
-    // Get user by email (case insensitive)
+    // Get user by email (case insensitive) and check if account is active
     const users = await executeQuery<User & { password_hash: string; is_active: boolean }>(
-      'SELECT * FROM users WHERE email = @email AND is_active = 1',
+      'SELECT * FROM users WHERE email = @email',
       { email: email.toLowerCase() }
     );
 
@@ -250,6 +250,28 @@ export async function loginUser(
     }
 
     const user = users[0];
+
+    // Check if account is active (not banned)
+    if (!user.is_active) {
+      // Log banned user login attempt
+      await executeQuery(
+        `INSERT INTO activity_logs (user_id, action, resource_type, details, ip_address, user_agent, created_at)
+         VALUES (@userId, 'login_blocked', 'auth', @details, @ipAddress, @userAgent, @createdAt)`,
+        {
+          userId: user.id,
+          details: 'Login attempt for deactivated/banned account',
+          ipAddress: ipAddress || null,
+          userAgent: userAgent || null,
+          createdAt: new Date()
+        }
+      );
+
+      return {
+        user: null,
+        token: null,
+        error: 'Your account has been deactivated. Please contact support.'
+      };
+    }
 
     // Verify password
     const isValidPassword = await verifyPassword(password, user.password_hash);

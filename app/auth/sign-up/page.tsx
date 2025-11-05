@@ -43,11 +43,16 @@ export default function SignUpPage() {
         throw new Error(data.error || 'Registration failed')
       }
 
-      // Store user data in localStorage for client-side access
+      // Store authentication token in both localStorage and cookie
+      if (data.token) {
+        localStorage.setItem('token', data.token)
+        // Set cookie for server-side authentication
+        document.cookie = `auth_token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
+      }
       localStorage.setItem('user', JSON.stringify(data.user))
       
-      // Redirect to sign-up success or dashboard
-      router.push("/auth/sign-up-success")
+      // Redirect directly to dashboard - user is now logged in
+      router.push("/dashboard")
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
     } finally {
