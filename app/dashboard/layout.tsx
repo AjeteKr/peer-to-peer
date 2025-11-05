@@ -1,20 +1,19 @@
 import type React from "react"
-import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { DashboardNav } from "@/components/dashboard-nav"
 import Link from "next/link"
+import { cookies } from "next/headers"
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Check if user is authenticated via JWT token
+  const cookieStore = await cookies()
+  const token = cookieStore.get('auth_token')
 
-  if (!user) {
+  if (!token) {
     redirect("/auth/login")
   }
 

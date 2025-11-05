@@ -1,41 +1,86 @@
-import { createClient } from "@/lib/supabase/server"
+"use client"
+
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { BookOpen, User, Calendar } from "lucide-react"
+import { BookOpen, User, Calendar, Loader2 } from "lucide-react"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { ExchangeRequestDialog } from "@/components/exchange-request-dialog"
 
-export default async function BookDetailPage({
+interface Book {
+  id: string
+  user_id: string
+  title: string
+  author: string
+  isbn?: string
+  description?: string
+  condition: 'new' | 'like_new' | 'good' | 'acceptable' | 'poor'
+  category: string
+  price?: number
+  listing_type: 'sell' | 'exchange' | 'donate'
+  status: 'available' | 'reserved' | 'sold'
+  image_url?: string
+  created_at: string
+  updated_at: string
+  profiles?: {
+    full_name: string
+    university: string
+    phone?: string
+  }
+}
+
+export default function BookDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }) {
-  const { id } = await params
-  const supabase = await createClient()
+  const router = useRouter()
+  const [book, setBook] = useState<Book | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [isOwner, setIsOwner] = useState(false)
 
-  const { data: book, error } = await supabase
-    .from("books")
-    .select(`
-      *,
-      profiles (
-        full_name,
-        university,
-        phone
-      )
-    `)
-    .eq("id", id)
-    .single()
+  useEffect(() => {
+    const fetchBook = async () => {
+      try {
+        const response = await fetch(`/api/books/${params.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          setBook(data)
+          
+          // Check if current user is owner
+          const token = localStorage.getItem('auth_token')
+          if (token) {
+            // You can decode the token to get user_id or make another API call
+            // For now, we'll assume not owner
+            setIsOwner(false)
+          }
+        } else {
+          router.push('/marketplace')
+        }
+      } catch (error) {
+        console.error('Error fetching book:', error)
+        router.push('/marketplace')
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  if (error || !book) {
-    notFound()
+    fetchBook()
+  }, [params.id, router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const isOwner = user?.id === book.user_id
+  if (!book) {
+    return null
+  }
 
   const conditionColors = {
     new: "bg-green-500/10 text-green-700 dark:text-green-400",

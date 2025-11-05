@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { createClient } from "@/lib/supabase/client"
+
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -33,47 +33,39 @@ export function ExchangeRequestDialog({ bookId, sellerId, bookTitle }: ExchangeR
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) {
+      // Check if user is authenticated
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
         router.push("/auth/login")
         return
       }
 
-      // Create exchange request
-      const { data: exchange, error: exchangeError } = await supabase
-        .from("exchanges")
-        .insert({
+      // Create exchange request via API
+      const response = await fetch('/api/exchanges', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
           book_id: bookId,
           seller_id: sellerId,
-          buyer_id: user.id,
-          status: "pending",
-          message: message,
+          message: message
         })
-        .select()
-        .single()
+      })
 
-      if (exchangeError) throw exchangeError
-
-      // Create initial message
-      if (exchange && message) {
-        const { error: messageError } = await supabase.from("messages").insert({
-          exchange_id: exchange.id,
-          sender_id: user.id,
-          receiver_id: sellerId,
-          content: message,
-        })
-
-        if (messageError) throw messageError
+      if (!response.ok) {
+        throw new Error('Failed to create exchange request')
       }
 
       setOpen(false)
+      setMessage("")
+      
+      // Show success message or redirect
       router.push("/dashboard/messages")
       router.refresh()
     } catch (error: unknown) {

@@ -10,13 +10,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'placeholder.svg',
       },
-      {
-        protocol: 'https',
-        hostname: '*.supabase.co',
-      },
     ],
     unoptimized: true,
   },
+  // SQL Server support
+  serverExternalPackages: ['mssql'],
   // Enhanced PWA Configuration
   experimental: {
     webpackBuildWorker: true,

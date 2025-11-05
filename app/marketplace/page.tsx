@@ -143,12 +143,10 @@ export default function MarketplacePage() {
         const data = await response.json()
         setBooks(data.books || [])
       } else {
-        console.error("Error fetching books:", response.statusText)
-        // Fallback to sample data if API fails
+        // Fallback to sample data if API fails (database not set up yet)
         setBooks(getSampleBooks())
       }
     } catch (error) {
-      console.error("Error fetching books:", error)
       // Fallback to sample data if database isn't set up
       setBooks(getSampleBooks())
     } finally {

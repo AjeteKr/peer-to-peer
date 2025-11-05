@@ -5,19 +5,21 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Testing SQL Server connection...');
     
-    const isConnected = await testConnection();
+    const result = await testConnection();
     
-    if (isConnected) {
+    if (result.success) {
       return NextResponse.json({
         status: 'success',
         message: '✅ SQL Server connection successful!',
         timestamp: new Date().toISOString(),
-        database: 'Connected to SQL Server'
+        database: result.database,
+        serverVersion: result.serverVersion
       });
     } else {
       return NextResponse.json({
         status: 'error',
         message: '❌ SQL Server connection failed',
+        error: result.error,
         timestamp: new Date().toISOString(),
         suggestion: 'Check your environment variables and ensure SQL Server is running'
       }, { status: 500 });

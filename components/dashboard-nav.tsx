@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { BookOpen, User, MessageSquare, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 
 export function DashboardNav() {
@@ -13,9 +12,9 @@ export function DashboardNav() {
   const router = useRouter()
 
   const handleSignOut = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push("/")
+    // Clear any local storage tokens
+    localStorage.removeItem('auth_token')
+    router.push("/auth/login")
     router.refresh()
   }
 

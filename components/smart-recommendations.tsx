@@ -37,12 +37,10 @@ export function SmartRecommendations({ userId }: SmartRecommendationsProps) {
       // Filter available books
       const availableBooks = books.filter((book: Book) => book.status === 'available')
       
-      // Simple recommendation logic - can be enhanced later
-      const shuffled = availableBooks.sort(() => 0.5 - Math.random())
-      
-      setRecommendations(shuffled.slice(0, 6))
-      setTrendingBooks(shuffled.slice(6, 12))
-      setRecentlyAdded(shuffled.slice(12, 18))
+      // Simple recommendation logic - deterministic to avoid hydration issues
+      setRecommendations(availableBooks.slice(0, 6))
+      setTrendingBooks(availableBooks.slice(6, 12))
+      setRecentlyAdded(availableBooks.slice(12, 18))
     } catch (error) {
       console.error("Error fetching recommendations:", error)
     } finally {

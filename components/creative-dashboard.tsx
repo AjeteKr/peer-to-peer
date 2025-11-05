@@ -2,11 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { createClient } from "@/lib/supabase/client"
-import type { Book, UserStats } from "@/lib/types"
-import { UserProfileCard } from "@/components/user-profile-card"
+import type { Book } from "@/lib/types"
 import { SmartRecommendations } from "@/components/smart-recommendations"
-import { CampusMap } from "@/components/campus-map"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,93 +22,42 @@ import {
 import Link from "next/link"
 
 export default function CreativeDashboard() {
-  const [userStats, setUserStats] = useState<UserStats | null>(null)
   const [recentBooks, setRecentBooks] = useState<Book[]>([])
-  const [nearbyBooks, setNearbyBooks] = useState<any[]>([])
   const [quickStats, setQuickStats] = useState({
     activeListings: 0,
     completedExchanges: 0,
     totalViews: 0,
-    totalLikes: 0
+    totalBooks: 0
   })
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchDashboardData()
   }, [])
 
   const fetchDashboardData = async () => {
-    const supabase = createClient()
+    setLoading(true)
     
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      
-      setCurrentUserId(user.id)
-
-      // Mock user stats (replace with real data)
-      setUserStats({
-        level: 5,
-        experience: 2350,
-        books_shared: 12,
-        books_received: 8,
-        reputation_score: 4.7,
-        badges: [
-          { id: '1', name: 'First Steps', description: 'Listed first book', icon: '📚', rarity: 'common' },
-          { id: '2', name: 'Social Butterfly', description: 'Connected with 20+ students', icon: '🦋', rarity: 'epic' },
-          { id: '3', name: 'Speed Exchanger', description: 'Quick exchange', icon: '⚡', rarity: 'rare' }
-        ],
-        streak_days: 7,
-        total_saved_money: 245
-      })
-
-      // Try to fetch user's books (graceful fallback if tables don't exist)
-      let books: any[] = []
-      try {
-        const { data: booksData, error } = await supabase
-          .from("books")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(5)
-
-        if (error && (error.code === 'PGRST116' || error.message?.includes('relation'))) {
-          console.log("Database tables not set up yet. Using sample data for dashboard.")
-          books = []
-        } else if (error) {
-          throw error
-        } else {
-          books = booksData || []
-        }
-      } catch (error) {
-        console.log("Using sample data for dashboard:", error)
-        books = []
+      // Fetch books from our SQL Server API
+      const response = await fetch('/api/books')
+      if (response.ok) {
+        const books = await response.json()
+        setRecentBooks(books.slice(0, 6))
+        
+        // Calculate some basic stats
+        setQuickStats({
+          activeListings: books.filter((book: Book) => book.status === 'available').length,
+          completedExchanges: books.filter((book: Book) => book.status === 'sold').length,
+          totalViews: books.length * 5, // Mock data
+          totalBooks: books.length
+        })
       }
-
-      setRecentBooks(books)
-
-      // Calculate quick stats (using sample data if database not set up)
-      const activeBooks = books?.filter(b => b.status === 'available').length || 0
-      setQuickStats({
-        activeListings: activeBooks || 2, // Show sample data if no books
-        completedExchanges: books?.filter(b => b.status === 'sold').length || 1,
-        totalViews: Math.floor(Math.random() * 500) + 100, // Mock data
-        totalLikes: Math.floor(Math.random() * 50) + 10 // Mock data
-      })
-
-      // Mock nearby books data
-      setNearbyBooks([
-        {
-          id: '1',
-          book: books?.[0] || { title: 'Sample Book', author: 'Author', listing_type: 'sell', price: 25 },
-          meetupSpot: 'Library - Main Entrance',
-          distance: 150,
-          availableTime: 'Today 2-4 PM'
-        }
-      ])
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -222,8 +168,29 @@ export default function CreativeDashboard() {
             transition={{ delay: 0.2 }}
             className="space-y-6"
           >
-            {/* User Profile Card */}
-            {userStats && <UserProfileCard stats={userStats} />}
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-yellow-500" />
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Link href="/marketplace/new">
+                  <Button className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    List a Book
+                  </Button>
+                </Link>
+                <Link href="/marketplace">
+                  <Button variant="outline" className="w-full">
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Browse Books
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
             
             {/* Quick Stats */}
             <Card>
@@ -252,8 +219,8 @@ export default function CreativeDashboard() {
                   </div>
                   <div className="text-center p-3 bg-muted/50 rounded-lg">
                     <Gift className="h-6 w-6 mx-auto mb-2 text-orange-500" />
-                    <div className="text-2xl font-bold text-orange-600">{quickStats.totalLikes}</div>
-                    <div className="text-xs text-muted-foreground">Likes</div>
+                    <div className="text-2xl font-bold text-orange-600">{quickStats.totalBooks}</div>
+                    <div className="text-xs text-muted-foreground">Total Books</div>
                   </div>
                 </div>
               </CardContent>
@@ -286,11 +253,20 @@ export default function CreativeDashboard() {
               </TabsList>
               
               <TabsContent value="recommendations" className="mt-6">
-                {currentUserId && <SmartRecommendations userId={currentUserId} />}
+                <SmartRecommendations />
               </TabsContent>
               
               <TabsContent value="campus" className="mt-6">
-                <CampusMap nearbyBooks={nearbyBooks} />
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Campus Activity</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">
+                      Campus map and nearby books feature coming soon! Connect with students in your area.
+                    </p>
+                  </CardContent>
+                </Card>
               </TabsContent>
               
               <TabsContent value="activity" className="mt-6">

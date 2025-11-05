@@ -1,13 +1,8 @@
 -- SQL Server Database Setup for Peer-to-Peer Book Exchange
 -- Run this script in SQL Server Management Studio (SSMS) or Azure Data Studio
 
--- Create database (if not exists)
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'BookExchangeDB')
-BEGIN
-    CREATE DATABASE BookExchangeDB;
-END;
-
-USE BookExchangeDB;
+-- Use existing database (peer-to-peer)
+USE [peer-to-peer];
 
 -- 1. Users Table (Authentication + Profiles)
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='users' AND xtype='U')
@@ -172,8 +167,8 @@ BEGIN
         book_id UNIQUEIDENTIFIER NOT NULL,
         created_at DATETIME2 DEFAULT GETDATE(),
         
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE NO ACTION,
+        FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE NO ACTION,
         UNIQUE(user_id, book_id)
     );
 
@@ -184,6 +179,7 @@ END;
 -- Users trigger
 IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'tr_users_updated_at')
     DROP TRIGGER tr_users_updated_at;
+GO
 
 CREATE TRIGGER tr_users_updated_at
 ON users
@@ -195,10 +191,12 @@ BEGIN
     FROM users u
     INNER JOIN inserted i ON u.id = i.id;
 END;
+GO
 
 -- Books trigger
 IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'tr_books_updated_at')
     DROP TRIGGER tr_books_updated_at;
+GO
 
 CREATE TRIGGER tr_books_updated_at
 ON books
@@ -210,10 +208,12 @@ BEGIN
     FROM books b
     INNER JOIN inserted i ON b.id = i.id;
 END;
+GO
 
 -- Exchanges trigger
 IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'tr_exchanges_updated_at')
     DROP TRIGGER tr_exchanges_updated_at;
+GO
 
 CREATE TRIGGER tr_exchanges_updated_at
 ON exchanges
@@ -225,10 +225,12 @@ BEGIN
     FROM exchanges e
     INNER JOIN inserted i ON e.id = i.id;
 END;
+GO
 
 -- User Stats trigger
 IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'tr_user_stats_updated_at')
     DROP TRIGGER tr_user_stats_updated_at;
+GO
 
 CREATE TRIGGER tr_user_stats_updated_at
 ON user_stats
@@ -240,6 +242,7 @@ BEGIN
     FROM user_stats us
     INNER JOIN inserted i ON us.id = i.id;
 END;
+GO
 
 -- 9. Insert Sample Data
 -- Sample categories
