@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery } from '@/lib/sqlserver/connection';
-import { getAuthenticatedUser } from '@/lib/sqlserver/auth';
+import { authenticateRequest } from '@/lib/sqlserver/middleware';
 
 export interface Exchange {
   id: string;
@@ -24,10 +24,10 @@ export interface Exchange {
 // GET /api/exchanges - Fetch user's exchanges
 export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(request);
+    const { user, error } = await authenticateRequest(request);
     if (!user) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: error || 'Authentication required' },
         { status: 401 }
       );
     }
@@ -82,10 +82,10 @@ export async function GET(request: NextRequest) {
 // POST /api/exchanges - Create new exchange request
 export async function POST(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(request);
+    const { user, error } = await authenticateRequest(request);
     if (!user) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: error || 'Authentication required' },
         { status: 401 }
       );
     }

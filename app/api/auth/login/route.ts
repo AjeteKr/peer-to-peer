@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loginUser } from '@/lib/sqlserver/auth';
+import { getRequestMetadata } from '@/lib/sqlserver/middleware';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,8 +15,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get request metadata for security logging
+    const { ipAddress, userAgent } = getRequestMetadata(request);
+
     // Login user
-    const result = await loginUser(email, password);
+    const result = await loginUser(email, password, ipAddress, userAgent);
 
     if (result.error) {
       return NextResponse.json(

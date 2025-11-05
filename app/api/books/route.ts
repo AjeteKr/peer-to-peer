@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery } from '@/lib/sqlserver/connection';
-import { getAuthenticatedUser } from '@/lib/sqlserver/auth';
+import { authenticateRequest } from '@/lib/sqlserver/middleware';
 
 export interface Book {
   id: string;
@@ -113,10 +113,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
-    const user = await getAuthenticatedUser(request);
+    const { user, error } = await authenticateRequest(request);
     if (!user) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: error || 'Authentication required' },
         { status: 401 }
       );
     }

@@ -2,7 +2,9 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { PWAInstaller } from "@/components/pwa-installer"
-import { DatabaseSetupNotification } from "@/components/database-setup-notification"
+import { ThemeProvider } from "@/components/theme-provider"
+import { SqlServerSetupNotification } from "@/components/sql-server-setup-notification"
+import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -57,9 +59,17 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="BookSwap" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children}
-        <PWAInstaller />
-        <DatabaseSetupNotification />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <SqlServerSetupNotification />
+          <PWAInstaller />
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )

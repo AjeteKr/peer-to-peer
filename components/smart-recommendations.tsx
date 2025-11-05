@@ -2,15 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { createClient } from "@/lib/supabase/client"
 import type { Book } from "@/lib/types"
-import { EnhancedBookCard } from "./enhanced-book-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Sparkles, RefreshCw, TrendingUp, Clock } from "lucide-react"
+import { Sparkles, RefreshCw, TrendingUp, Clock, BookOpen, Star } from "lucide-react"
 
 interface SmartRecommendationsProps {
-  userId: string
+  userId?: string
 }
 
 export function SmartRecommendations({ userId }: SmartRecommendationsProps) {
@@ -25,67 +23,26 @@ export function SmartRecommendations({ userId }: SmartRecommendationsProps) {
   }, [userId])
 
   const fetchRecommendations = async () => {
-    const supabase = createClient()
     setIsLoading(true)
 
     try {
-      // Get user's preferences based on their activity
-      const { data: userBooks } = await supabase
-        .from("books")
-        .select("category")
-        .eq("user_id", userId)
-
-      const userCategories = [...new Set(userBooks?.map(b => b.category) || [])]
-
-      // Get recommended books based on user's categories
-      const { data: recommended } = await supabase
-        .from("books")
-        .select(`
-          *,
-          profiles (
-            full_name,
-            university
-          )
-        `)
-        .neq("user_id", userId)
-        .eq("status", "available")
-        .in("category", userCategories.length > 0 ? userCategories : ["textbook"])
-        .limit(6)
-        .order("created_at", { ascending: false })
-
-      // Get trending books (books with most recent activity)
-      const { data: trending } = await supabase
-        .from("books")
-        .select(`
-          *,
-          profiles (
-            full_name,
-            university
-          )
-        `)
-        .neq("user_id", userId)
-        .eq("status", "available")
-        .limit(6)
-        .order("updated_at", { ascending: false })
-
-      // Get recently added books
-      const { data: recent } = await supabase
-        .from("books")
-        .select(`
-          *,
-          profiles (
-            full_name,
-            university
-          )
-        `)
-        .neq("user_id", userId)
-        .eq("status", "available")
-        .limit(6)
-        .order("created_at", { ascending: false })
-
-      setRecommendations(recommended || [])
-      setTrendingBooks(trending || [])
-      setRecentlyAdded(recent || [])
+      // Fetch available books from our SQL Server API
+      const response = await fetch('/api/books')
+      if (!response.ok) {
+        throw new Error('Failed to fetch books')
+      }
+      
+      const books = await response.json()
+      
+      // Filter available books
+      const availableBooks = books.filter((book: Book) => book.status === 'available')
+      
+      // Simple recommendation logic - can be enhanced later
+      const shuffled = availableBooks.sort(() => 0.5 - Math.random())
+      
+      setRecommendations(shuffled.slice(0, 6))
+      setTrendingBooks(shuffled.slice(6, 12))
+      setRecentlyAdded(shuffled.slice(12, 18))
     } catch (error) {
       console.error("Error fetching recommendations:", error)
     } finally {
@@ -195,7 +152,30 @@ export function SmartRecommendations({ userId }: SmartRecommendationsProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
               >
-                <EnhancedBookCard book={book} />
+                <div className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-start gap-3">
+                    <BookOpen className="h-8 w-8 text-blue-500 mt-1" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-sm mb-1">{book.title}</h4>
+                      <p className="text-xs text-gray-600 mb-2">by {book.author}</p>
+                      <div className="flex gap-2 mb-2">
+                        <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                          {book.condition || 'Good'}
+                        </span>
+                        <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">
+                          {book.listing_type || 'exchange'}
+                        </span>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        className="w-full text-xs"
+                        onClick={() => window.location.href = `/marketplace/${book.id}`}
+                      >
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </motion.div>

@@ -17,11 +17,11 @@ interface DatabaseConfig {
   };
 }
 
-// SQL Server configuration
+// SQL Server configuration with Windows Authentication support
+const useIntegratedSecurity = process.env.SQL_SERVER_INTEGRATED_SECURITY === 'true';
+
 const dbConfig: DatabaseConfig = {
-  user: process.env.SQL_SERVER_USER || 'sa',
-  password: process.env.SQL_SERVER_PASSWORD!,
-  database: '.',
+  database: process.env.SQL_SERVER_DATABASE || 'master',
   server: process.env.SQL_SERVER_HOST || 'localhost',
   port: parseInt(process.env.SQL_SERVER_PORT || '1433'),
   requestTimeout: 30000,
@@ -30,9 +30,16 @@ const dbConfig: DatabaseConfig = {
     encrypt: process.env.SQL_SERVER_ENCRYPT === 'true' || false,
     trustServerCertificate: process.env.SQL_SERVER_TRUST_CERT === 'true' || true,
     enableArithAbort: true,
+    integratedSecurity: useIntegratedSecurity,
     instanceName: process.env.SQL_SERVER_INSTANCE || undefined
   }
 };
+
+// Only add user/password if not using integrated security
+if (!useIntegratedSecurity) {
+  dbConfig.user = process.env.SQL_SERVER_USER || 'sa';
+  dbConfig.password = process.env.SQL_SERVER_PASSWORD!;
+}
 
 let pool: sql.ConnectionPool | null = null;
 
@@ -170,14 +177,28 @@ export async function executeTransaction<T = any>(
   }
 }
 
-// Helper function to test connection
-export async function testConnection(): Promise<boolean> {
+// Helper function to test connection  
+export async function testConnection(): Promise<{ success: boolean; serverVersion?: string; database?: string; error?: string }> {
   try {
-    const result = await executeQuery('SELECT 1 as test');
-    return result.length > 0;
+    // Simple connection test
+    const connection = await getConnection();
+    const request = connection.request();
+    const result = await request.query('SELECT @@VERSION as version, DB_NAME() as database_name');
+    
+    if (result.recordset && result.recordset.length > 0) {
+      return {
+        success: true,
+        serverVersion: result.recordset[0].version,
+        database: result.recordset[0].database_name
+      };
+    }
+    return { success: false, error: 'No version information returned' };
   } catch (error) {
     console.error('❌ Connection test failed:', error);
-    return false;
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
   }
 }
 

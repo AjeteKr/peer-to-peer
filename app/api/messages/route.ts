@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery } from '@/lib/sqlserver/connection';
-import { getAuthenticatedUser } from '@/lib/sqlserver/auth';
+import { authenticateRequest } from '@/lib/sqlserver/middleware';
 
 export interface Message {
   id: string;
@@ -18,10 +18,10 @@ export interface Message {
 // GET /api/messages - Fetch messages for user's exchanges
 export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(request);
+    const { user, error } = await authenticateRequest(request);
     if (!user) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: error || 'Authentication required' },
         { status: 401 }
       );
     }
@@ -105,10 +105,10 @@ export async function GET(request: NextRequest) {
 // POST /api/messages - Send a new message
 export async function POST(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(request);
+    const { user, error } = await authenticateRequest(request);
     if (!user) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: error || 'Authentication required' },
         { status: 401 }
       );
     }
